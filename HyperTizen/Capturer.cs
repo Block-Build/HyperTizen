@@ -16,22 +16,24 @@ namespace HyperTizen
         private enum ApiVariant { Unknown, PpiVe, Ve7, CsVe }
         private static ApiVariant _api = ApiVariant.Unknown;
 
-        // 8 static points — all captured every frame.
-        // 4 batches × 20ms = ~10fps, all 8 zones update together.
+        // 10 static points — all captured every frame.
+        // Top (left→right), Right (top→bottom), bottom (right→left), Left (bottom→top).
         private static readonly CapturePoint[][] _pointSets = {
             new CapturePoint[] {
-                new CapturePoint(0.21,  0.05),   // [0] top-left
-                new CapturePoint(0.7,   0.05),   // [1] top-right
-                new CapturePoint(0.95,  0.275),  // [2] right-top
-                new CapturePoint(0.95,  0.8),    // [3] right-bottom
-                new CapturePoint(0.65,  0.95),   // [4] bottom-right
-                new CapturePoint(0.35,  0.95),   // [5] bottom-left
-                new CapturePoint(0.05,  0.2),    // [6] left-top
-                new CapturePoint(0.05,  0.725),  // [7] left-bottom
+                new CapturePoint(0.17,  0.14),   // [0] top-left
+                new CapturePoint(0.5,   0.14),   // [1] top-center
+                new CapturePoint(0.83,  0.14),   // [2] top-right
+                new CapturePoint(0.86,  0.275),  // [3] right-top
+                new CapturePoint(0.86,  0.8),    // [4] right-bottom
+                new CapturePoint(0.83,  0.86),   // [5] bottom-right
+                new CapturePoint(0.5,   0.86),   // [6] bottom-center
+                new CapturePoint(0.17,  0.86),   // [7] bottom-left
+                new CapturePoint(0.14,  0.2),    // [8] left-top
+                new CapturePoint(0.14,  0.725),  // [9] left-bottom
             }
         };
         private static int _setIndex = 0;
-        private static readonly Color[] _blended = new Color[8];
+        private static readonly Color[] _blended = new Color[10];
 
         // Tizen 9 new firmware (ppi_ve_* prefix)
         [DllImport("/usr/lib/libvideoenhance.so", CallingConvention = CallingConvention.Cdecl, EntryPoint = "ppi_ve_get_rgb_measure_condition")]
@@ -213,23 +215,26 @@ namespace HyperTizen
 
         public static string ToImage(Color[] colors)
         {
-            // [0]=top-left [1]=top-right [2]=right-top [3]=right-bottom [4]=bottom-right [5]=bottom-left [6]=left-top [7]=left-bottom
+            // [0]=top-left [1]=top-center [2]=top-right [3]=right-top [4]=right-bottom
+            // [5]=bottom-right [6]=bottom-center [7]=bottom-left [8]=left-top [9]=left-bottom
             using (var image = new SKBitmap(64, 48))
             using (var canvas = new SKCanvas(image))
             {
                 canvas.Clear(SKColors.Black);
-                // Top strip (rows 0-3): 2 zones
-                canvas.DrawRect(SKRect.Create(0,  0, 32, 4), new SKPaint { Color = ClampColor(colors[0]) });
-                canvas.DrawRect(SKRect.Create(32, 0, 32, 4), new SKPaint { Color = ClampColor(colors[1]) });
+                // Top strip (rows 0-3): 3 zones (21+21+22 = 64)
+                canvas.DrawRect(SKRect.Create(0,  0, 21, 4), new SKPaint { Color = ClampColor(colors[0]) });
+                canvas.DrawRect(SKRect.Create(21, 0, 21, 4), new SKPaint { Color = ClampColor(colors[1]) });
+                canvas.DrawRect(SKRect.Create(42, 0, 22, 4), new SKPaint { Color = ClampColor(colors[2]) });
                 // Right strip (cols 61-63): 2 zones
-                canvas.DrawRect(SKRect.Create(61,  0, 3, 24), new SKPaint { Color = ClampColor(colors[2]) });
-                canvas.DrawRect(SKRect.Create(61, 24, 3, 24), new SKPaint { Color = ClampColor(colors[3]) });
-                // Bottom strip (rows 44-47): 2 zones
-                canvas.DrawRect(SKRect.Create(32, 44, 32, 4), new SKPaint { Color = ClampColor(colors[4]) });
-                canvas.DrawRect(SKRect.Create(0,  44, 32, 4), new SKPaint { Color = ClampColor(colors[5]) });
+                canvas.DrawRect(SKRect.Create(61,  0, 3, 24), new SKPaint { Color = ClampColor(colors[3]) });
+                canvas.DrawRect(SKRect.Create(61, 24, 3, 24), new SKPaint { Color = ClampColor(colors[4]) });
+                // Bottom strip (rows 44-47): 3 zones
+                canvas.DrawRect(SKRect.Create(42, 44, 22, 4), new SKPaint { Color = ClampColor(colors[5]) });
+                canvas.DrawRect(SKRect.Create(21, 44, 21, 4), new SKPaint { Color = ClampColor(colors[6]) });
+                canvas.DrawRect(SKRect.Create(0,  44, 21, 4), new SKPaint { Color = ClampColor(colors[7]) });
                 // Left strip (cols 0-2): 2 zones
-                canvas.DrawRect(SKRect.Create(0,  0, 3, 24), new SKPaint { Color = ClampColor(colors[6]) });
-                canvas.DrawRect(SKRect.Create(0, 24, 3, 24), new SKPaint { Color = ClampColor(colors[7]) });
+                canvas.DrawRect(SKRect.Create(0,  0, 3, 24), new SKPaint { Color = ClampColor(colors[8]) });
+                canvas.DrawRect(SKRect.Create(0, 24, 3, 24), new SKPaint { Color = ClampColor(colors[9]) });
 
                 using (var memoryStream = new MemoryStream())
                 {
